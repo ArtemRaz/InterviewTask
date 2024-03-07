@@ -41,7 +41,11 @@ class AInterviewTaskCharacter : public ACharacter
 	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputMappingContext* PawnMappingContext;
+	UInputMappingContext* MovementMappingContext;
+	
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputMappingContext* LookMappingContext;
 
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -74,6 +78,12 @@ protected:
 	
 	// To add mapping context
 	virtual void BeginPlay();
+	
+	UFUNCTION()
+	void Die();
+	
+	UFUNCTION()
+	void Respawn();
 
 public:
 	UPROPERTY()

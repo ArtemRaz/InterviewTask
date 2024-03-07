@@ -2,6 +2,6 @@
 
 #include "Core/InterviewTaskGameMode.h"
 
-AInterviewTaskGameMode::AInterviewTaskGameMode()
-{
-}
+#include "GameFramework/Character.h"
+
+

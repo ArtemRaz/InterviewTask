@@ -10,7 +10,12 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "TimerManager.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Core/InterviewTaskGameInstance.h"
+#include "Core/InterviewTaskGameMode.h"
+#include "GameFramework/GameMode.h"
+#include "GameFramework/GameModeBase.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -41,16 +46,17 @@ AInterviewTaskCharacter::AInterviewTaskCharacter()
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	
 	StatsWidgetComponent = CreateDefaultSubobject<UFacingWidgetComponent>(TEXT("StatsWidgetComponent"));
-	StatsWidgetComponent->SetupAttachment(RootComponent);
-	StatsWidgetComponent->SetRelativeLocation(FVector(0,0,130));
+	StatsWidgetComponent->SetupAttachment(GetMesh());
+	StatsWidgetComponent->SetRelativeLocation(FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()*2.5));
 	StatsWidgetComponent->SetDrawSize(FVector2D(1500, 100));
 	StatsWidgetComponent->bOwnerNoSee = true;
 	
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->SetupAttachment(GetMesh());
 	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	CameraBoom->SetRelativeLocation(FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()*2));
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -83,7 +89,46 @@ void AInterviewTaskCharacter::BeginPlay()
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
-			Subsystem->AddMappingContext(PawnMappingContext, 0);
+			Subsystem->AddMappingContext(LookMappingContext, 0);
+			Subsystem->AddMappingContext(MovementMappingContext, 0);
+		}
+	}
+	FTimerHandle Handle;
+	GetWorldTimerManager().SetTimer(Handle, this, &AInterviewTaskCharacter::Die,
+										   4, false);
+
+}
+
+void AInterviewTaskCharacter::Die()
+{
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->RemoveMappingContext(MovementMappingContext);
+		}
+	}
+	
+	GetMesh()->SetSimulatePhysics(true);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	FTimerHandle WarningTimerHandle;
+	GetWorldTimerManager().SetTimer(WarningTimerHandle, this, &AInterviewTaskCharacter::Respawn,
+										   3, false);
+	
+}
+
+void AInterviewTaskCharacter::Respawn()
+{
+	AController* ControllerRef = GetController();
+	ControllerRef->UnPossess();
+	Destroy();
+	
+	if (UWorld* World = GetWorld())
+	{
+		if (AInterviewTaskGameMode* GameMode = Cast<AInterviewTaskGameMode>(World->GetAuthGameMode()))
+		{
+			GameMode->RestartPlayer(ControllerRef);
 		}
 	}
 }
