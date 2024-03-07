@@ -93,9 +93,6 @@ void AInterviewTaskCharacter::BeginPlay()
 			Subsystem->AddMappingContext(MovementMappingContext, 0);
 		}
 	}
-	FTimerHandle Handle;
-	GetWorldTimerManager().SetTimer(Handle, this, &AInterviewTaskCharacter::Die,
-										   4, false);
 
 }
 
