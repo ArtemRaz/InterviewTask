@@ -13,5 +13,7 @@ UCLASS()
 class INTERVIEWTASK_API UInterviewTaskGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
-	
+public:
+	UPROPERTY(EditAnywhere)
+	FString Username;
 };

@@ -1,31 +1,37 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Widgets/ConnectMenu.h"
+#include "Widgets/W_ConnectMenu.h"
 #include "TimerManager.h"
+#include "Core/InterviewTaskGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-void UConnectMenu::NativeConstruct()
+void UW_ConnectMenu::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	ConnectButton->OnClicked.AddDynamic(this, &UConnectMenu::OnClickedConnect);
-	QuitButton->OnClicked.AddDynamic(this, &UConnectMenu::OnClickedQuit);
+	ConnectButton->OnClicked.AddDynamic(this, &UW_ConnectMenu::OnClickedConnect);
+	QuitButton->OnClicked.AddDynamic(this, &UW_ConnectMenu::OnClickedQuit);
 	
 }
 
-void UConnectMenu::OnClickedConnect()
+void UW_ConnectMenu::OnClickedConnect()
 {
-	if (UsernameTextBox->GetText().IsEmpty())
+	const FText Username = UsernameTextBox->GetText();
+	if (Username.IsEmpty())
 	{
 		ShowWarning("You must provide a username before connecting");
 		return;
 	}
+	if (UInterviewTaskGameInstance* GameInstance = Cast<UInterviewTaskGameInstance>(GetGameInstance()))
+	{
+		GameInstance->Username = Username.ToString();
+	}
 	UGameplayStatics::OpenLevel(this, TEXT("127.0.0.1:7777"), true);
 }
 
-void UConnectMenu::OnClickedQuit()
+void UW_ConnectMenu::OnClickedQuit()
 {
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 	const TEnumAsByte QuitPreference = EQuitPreference::Quit;
@@ -33,16 +39,16 @@ void UConnectMenu::OnClickedQuit()
 	UKismetSystemLibrary::QuitGame(this, PlayerController, QuitPreference, true);
 }
 
-void UConnectMenu::ShowWarning(const FString& Message, const float Time)
+void UW_ConnectMenu::ShowWarning(const FString& Message, const float Time)
 {
 	WarningTextBlock->SetText(FText::FromString(Message));
 	WarningTextBlock->SetVisibility(ESlateVisibility::Visible);
 
-	GetWorld()->GetTimerManager().SetTimer(WarningTimerHandle, this, &UConnectMenu::HideWarning,
+	GetWorld()->GetTimerManager().SetTimer(WarningTimerHandle, this, &UW_ConnectMenu::HideWarning,
 	                                       Time, false);
 }
 
-void UConnectMenu::HideWarning()
+void UW_ConnectMenu::HideWarning()
 {
 	WarningTextBlock->SetVisibility(ESlateVisibility::Hidden);
 	GetWorld()->GetTimerManager().ClearTimer(WarningTimerHandle);

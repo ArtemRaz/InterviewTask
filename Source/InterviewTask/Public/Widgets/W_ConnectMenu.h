@@ -7,13 +7,13 @@
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
-#include "ConnectMenu.generated.h"
+#include "W_ConnectMenu.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class INTERVIEWTASK_API UConnectMenu : public UUserWidget
+class INTERVIEWTASK_API UW_ConnectMenu : public UUserWidget
 {
 	GENERATED_BODY()
 	UPROPERTY(meta = (BindWidget))

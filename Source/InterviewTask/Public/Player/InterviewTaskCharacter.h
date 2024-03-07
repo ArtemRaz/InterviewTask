@@ -3,8 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/FacingWidgetComponent.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "Widgets/W_UserStats.h"
 #include "InterviewTaskCharacter.generated.h"
 
 class USpringArmComponent;
@@ -20,6 +22,15 @@ class AInterviewTaskCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+	UPROPERTY()
+	UW_UserStats* StatsWidget;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UW_UserStats> StatsWidgetClass;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UFacingWidgetComponent* StatsWidgetComponent;
+	
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -65,6 +76,12 @@ protected:
 	virtual void BeginPlay();
 
 public:
+	UPROPERTY()
+	float MaxHealth = 100;
+
+	UPROPERTY()
+	float Health = MaxHealth;
+	
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/

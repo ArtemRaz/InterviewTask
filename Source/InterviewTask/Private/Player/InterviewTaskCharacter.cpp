@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Core/InterviewTaskGameInstance.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -38,7 +39,13 @@ AInterviewTaskCharacter::AInterviewTaskCharacter()
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
-
+	
+	StatsWidgetComponent = CreateDefaultSubobject<UFacingWidgetComponent>(TEXT("StatsWidgetComponent"));
+	StatsWidgetComponent->SetupAttachment(RootComponent);
+	StatsWidgetComponent->SetRelativeLocation(FVector(0,0,130));
+	StatsWidgetComponent->SetDrawSize(FVector2D(1500, 100));
+	StatsWidgetComponent->bOwnerNoSee = true;
+	
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -59,6 +66,18 @@ void AInterviewTaskCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
+	StatsWidgetComponent->SetWidgetClass(StatsWidgetClass);
+
+	StatsWidget = Cast<UW_UserStats>(StatsWidgetComponent->GetWidget());
+	if (IsValid(StatsWidget))
+	{
+		StatsWidget->SetHealthPercent(Health/MaxHealth);
+		if (UInterviewTaskGameInstance* GameInstance = Cast<UInterviewTaskGameInstance>(GetGameInstance()))
+		{
+			StatsWidget->SetUsername(GameInstance->Username);
+		}
+	}
+	
 	//Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
