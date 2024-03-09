@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Actors/Weapon.h"
 #include "Components/FacingWidgetComponent.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
@@ -22,6 +23,21 @@ class AInterviewTaskCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere)
+	float MaxHealth = 100;
+
+	UPROPERTY(EditAnywhere, ReplicatedUsing=OnRep_Health)
+	float Health = MaxHealth;
+
+	UPROPERTY(ReplicatedUsing=OnRep_Username)
+	FString Username;
+	
+	UPROPERTY(Replicated)
+	AWeapon* Weapon;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly,Category = Weapon, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AWeapon> WeaponClass;
+	
 	UPROPERTY()
 	UW_UserStats* StatsWidget;
 	
@@ -46,6 +62,9 @@ class AInterviewTaskCharacter : public ACharacter
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* LookMappingContext;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputMappingContext* WeaponMappingContext;
 
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -58,6 +77,12 @@ class AInterviewTaskCharacter : public ACharacter
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* FireAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* ReloadAction;
 
 public:
 	AInterviewTaskCharacter();
@@ -77,21 +102,35 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	// To add mapping context
-	virtual void BeginPlay();
+	virtual void BeginPlay() override;
+
+	virtual void PostInitProperties() override;
+
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	UFUNCTION(Server, Reliable)
+	void SetUsername(const FString& NewUsername);
+	
+	UFUNCTION()
+	void StartFire();
+	
+	UFUNCTION()
+	void FinishFire();
+	
+	UFUNCTION()
+	void Reload();
 	
 	UFUNCTION()
 	void Die();
-	
+
 	UFUNCTION()
-	void Respawn();
+	void OnRep_Health();
 
-public:
-	UPROPERTY()
-	float MaxHealth = 100;
-
-	UPROPERTY()
-	float Health = MaxHealth;
+	UFUNCTION()
+	void OnRep_Username();
 	
+public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/

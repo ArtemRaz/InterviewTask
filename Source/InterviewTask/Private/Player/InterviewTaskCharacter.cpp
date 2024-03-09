@@ -16,6 +16,8 @@
 #include "Core/InterviewTaskGameMode.h"
 #include "GameFramework/GameMode.h"
 #include "GameFramework/GameModeBase.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/InterviewTaskPlayerState.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -24,6 +26,8 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AInterviewTaskCharacter::AInterviewTaskCharacter()
 {
+	SetCanBeDamaged(true);
+	bReplicates = true;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -53,7 +57,7 @@ AInterviewTaskCharacter::AInterviewTaskCharacter()
 	
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(GetMesh());
+	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
 	CameraBoom->SetRelativeLocation(FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()*2));
@@ -62,7 +66,7 @@ AInterviewTaskCharacter::AInterviewTaskCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-
+	
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -71,19 +75,19 @@ void AInterviewTaskCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
-
-	StatsWidgetComponent->SetWidgetClass(StatsWidgetClass);
-
+	
+	UInterviewTaskGameInstance* GameInstance = Cast<UInterviewTaskGameInstance>(GetGameInstance());
+	if (GetLocalRole() == ROLE_AutonomousProxy && IsValid(GameInstance))
+	{
+		SetUsername(GameInstance->Username);
+	}
+	
 	StatsWidget = Cast<UW_UserStats>(StatsWidgetComponent->GetWidget());
 	if (IsValid(StatsWidget))
 	{
 		StatsWidget->SetHealthPercent(Health/MaxHealth);
-		if (UInterviewTaskGameInstance* GameInstance = Cast<UInterviewTaskGameInstance>(GetGameInstance()))
-		{
-			StatsWidget->SetUsername(GameInstance->Username);
-		}
+		StatsWidget->SetUsername(Username);
 	}
-	
 	//Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
@@ -91,9 +95,73 @@ void AInterviewTaskCharacter::BeginPlay()
 		{
 			Subsystem->AddMappingContext(LookMappingContext, 0);
 			Subsystem->AddMappingContext(MovementMappingContext, 0);
+			Subsystem->AddMappingContext(WeaponMappingContext, 0);
 		}
 	}
 
+}
+
+void AInterviewTaskCharacter::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	if (GetNetMode()==NM_DedicatedServer)
+	{
+		Weapon = Cast<AWeapon>(GetWorld()->SpawnActor(WeaponClass.Get()));
+		Weapon->SetOwner(this);
+		Weapon->AttachToActor(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
+	}
+
+	StatsWidgetComponent->SetWidgetClass(StatsWidgetClass);
+}
+
+float AInterviewTaskCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+                                          AController* EventInstigator, AActor* DamageCauser)
+{
+	const float Damage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Health-=Damage;
+	if (Health<=0)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			if (AInterviewTaskGameMode* GameMode = Cast<AInterviewTaskGameMode>(World->GetAuthGameMode()))
+			{
+				GameMode->StartRespawn(GetController());
+			}
+		}
+		Die();
+	}
+	return Damage;
+}
+
+void AInterviewTaskCharacter::StartFire()
+{
+	if (IsValid(Weapon))
+	{
+		Weapon->StartFire();
+	}
+}
+
+void AInterviewTaskCharacter::FinishFire()
+{
+	if (IsValid(Weapon))
+	{
+		Weapon->FinishFire();
+	}
+}
+
+void AInterviewTaskCharacter::Reload()
+{
+	if (IsValid(Weapon))
+	{
+		Weapon->StartReload();
+	}
+}
+
+
+void AInterviewTaskCharacter::SetUsername_Implementation(const FString& NewUsername)
+{
+	Username = NewUsername;
 }
 
 void AInterviewTaskCharacter::Die()
@@ -103,31 +171,41 @@ void AInterviewTaskCharacter::Die()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->RemoveMappingContext(MovementMappingContext);
+			Subsystem->RemoveMappingContext(WeaponMappingContext);
 		}
 	}
 	
 	GetMesh()->SetSimulatePhysics(true);
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("NoCollision"));
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	
-	FTimerHandle WarningTimerHandle;
-	GetWorldTimerManager().SetTimer(WarningTimerHandle, this, &AInterviewTaskCharacter::Respawn,
-										   3, false);
-	
+	static FName MeshCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetCollisionProfileName(MeshCollisionProfileName);
 }
 
-void AInterviewTaskCharacter::Respawn()
+
+void AInterviewTaskCharacter::OnRep_Health()
 {
-	AController* ControllerRef = GetController();
-	ControllerRef->UnPossess();
-	Destroy();
-	
-	if (UWorld* World = GetWorld())
+	StatsWidget->SetHealthPercent(Health/MaxHealth);
+	if (Health<=0)
 	{
-		if (AInterviewTaskGameMode* GameMode = Cast<AInterviewTaskGameMode>(World->GetAuthGameMode()))
-		{
-			GameMode->RestartPlayer(ControllerRef);
-		}
+		Die();
 	}
+}
+
+void AInterviewTaskCharacter::OnRep_Username()
+{
+	if (IsValid(StatsWidget))
+	{
+		StatsWidget->SetUsername(Username);
+	}
+}
+
+void AInterviewTaskCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AInterviewTaskCharacter, Health);
+	DOREPLIFETIME(AInterviewTaskCharacter, Username);
+	DOREPLIFETIME(AInterviewTaskCharacter, Weapon);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -147,6 +225,11 @@ void AInterviewTaskCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AInterviewTaskCharacter::Look);
+
+		// Weapon
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AInterviewTaskCharacter::StartFire);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AInterviewTaskCharacter::FinishFire);
+		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AInterviewTaskCharacter::Reload);
 	}
 	else
 	{
