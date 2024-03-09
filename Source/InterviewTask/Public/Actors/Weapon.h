@@ -4,18 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/SkeletalMesh.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "Weapon.generated.h"
 
-UCLASS()
+UCLASS(Blueprintable, BlueprintType)
 class INTERVIEWTASK_API AWeapon : public AActor
 {
 	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UStaticMesh* Mesh;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Sounds, meta = (AllowPrivateAccess = "true"))
 	USoundBase* ReloadSound;
 
@@ -29,7 +27,7 @@ class INTERVIEWTASK_API AWeapon : public AActor
 	USoundBase* HitSound;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UStaticMeshComponent* MeshComponent;
+	USkeletalMeshComponent* MeshComponent;
 
 	UPROPERTY()
 	int32 MagazineCapacity = 30;
@@ -72,8 +70,6 @@ protected:
 	void SpawnSoundAtLocation(USoundBase* Sound, const FVector Location);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	virtual void PostInitProperties() override;
 
 	UFUNCTION()
 	void FinishReload();

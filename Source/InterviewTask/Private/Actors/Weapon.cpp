@@ -6,7 +6,7 @@
 
 #include "CollisionQueryParams.h"
 #include "TimerManager.h"
-#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/DamageEvents.h"
 #include "Engine/HitResult.h"
 #include "Engine/LocalPlayer.h"
@@ -22,8 +22,10 @@ AWeapon::AWeapon()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 
-	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
-	SetRootComponent(MeshComponent);
+	MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComponent"));
+	MeshComponent->SetCollisionProfileName("NoCollision");
+	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshComponent->SetupAttachment(RootComponent);
 }
 
 void AWeapon::Destroyed()
@@ -152,18 +154,6 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AWeapon, BulletsRemain)
-}
-
-void AWeapon::PostInitProperties()
-{
-	Super::PostInitProperties();
-
-	if (IsValid(Mesh))
-	{
-		MeshComponent->SetStaticMesh(Mesh);
-		MeshComponent->SetCollisionProfileName("NoCollision");
-		MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
 }
 
 void AWeapon::SetOwner(AActor* NewOwner)

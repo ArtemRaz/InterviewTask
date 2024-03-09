@@ -108,6 +108,8 @@ protected:
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	virtual void Destroyed() override;
+
 	UFUNCTION(Server, Reliable)
 	void SetUsername(const FString& NewUsername);
 	

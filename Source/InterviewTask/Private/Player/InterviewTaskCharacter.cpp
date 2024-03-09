@@ -109,7 +109,7 @@ void AInterviewTaskCharacter::PostInitProperties()
 	{
 		Weapon = Cast<AWeapon>(GetWorld()->SpawnActor(WeaponClass));
 		Weapon->SetOwner(this);
-		Weapon->AttachToActor(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName(TEXT("GripPoint")));
 	}
 
 	StatsWidgetComponent->SetWidgetClass(StatsWidgetClass);
@@ -132,6 +132,15 @@ float AInterviewTaskCharacter::TakeDamage(float DamageAmount, FDamageEvent const
 		Die();
 	}
 	return Damage;
+}
+
+void AInterviewTaskCharacter::Destroyed()
+{
+	Super::Destroyed();
+	if (IsValid(Weapon))
+	{
+		Weapon->Destroy();
+	}
 }
 
 void AInterviewTaskCharacter::StartFire()
