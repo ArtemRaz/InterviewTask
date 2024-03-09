@@ -30,6 +30,9 @@ class INTERVIEWTASK_API UW_ConnectMenu : public UUserWidget
 
 	UPROPERTY()
 	FTimerHandle WarningTimerHandle;
+
+	UPROPERTY()
+	int32 MaxUsernameLength=12;
 	
 	virtual void NativeConstruct() override;
 
@@ -38,6 +41,9 @@ class INTERVIEWTASK_API UW_ConnectMenu : public UUserWidget
 	
 	UFUNCTION()
 	void OnClickedQuit();
+	
+	UFUNCTION()
+	void OnTextChanged(const FText& Text);
 
 	UFUNCTION()
 	void ShowWarning(const FString& Message, float Time=5.f);

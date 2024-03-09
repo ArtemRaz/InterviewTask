@@ -10,10 +10,10 @@
 void UW_ConnectMenu::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
 	ConnectButton->OnClicked.AddDynamic(this, &UW_ConnectMenu::OnClickedConnect);
 	QuitButton->OnClicked.AddDynamic(this, &UW_ConnectMenu::OnClickedQuit);
-	
+	UsernameTextBox->OnTextChanged.AddDynamic(this, &UW_ConnectMenu::OnTextChanged);
 }
 
 void UW_ConnectMenu::OnClickedConnect()
@@ -37,6 +37,13 @@ void UW_ConnectMenu::OnClickedQuit()
 	const TEnumAsByte QuitPreference = EQuitPreference::Quit;
 
 	UKismetSystemLibrary::QuitGame(this, PlayerController, QuitPreference, true);
+}
+
+void UW_ConnectMenu::OnTextChanged(const FText& Text)
+{
+	FString String = Text.ToString();
+	String = String.Left(MaxUsernameLength);
+	UsernameTextBox->SetText(FText::FromString(String));
 }
 
 void UW_ConnectMenu::ShowWarning(const FString& Message, const float Time)
