@@ -105,9 +105,9 @@ void AInterviewTaskCharacter::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	if (GetNetMode()==NM_DedicatedServer)
+	if (GetNetMode()==NM_DedicatedServer && IsValid(WeaponClass))
 	{
-		Weapon = Cast<AWeapon>(GetWorld()->SpawnActor(WeaponClass.Get()));
+		Weapon = Cast<AWeapon>(GetWorld()->SpawnActor(WeaponClass));
 		Weapon->SetOwner(this);
 		Weapon->AttachToActor(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
 	}

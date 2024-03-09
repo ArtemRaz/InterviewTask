@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "NiagaraSystem.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
