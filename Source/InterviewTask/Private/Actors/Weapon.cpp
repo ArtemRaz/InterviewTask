@@ -25,7 +25,7 @@ AWeapon::AWeapon()
 	MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComponent"));
 	MeshComponent->SetCollisionProfileName("NoCollision");
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	MeshComponent->SetupAttachment(RootComponent);
+	SetRootComponent(MeshComponent);
 }
 
 void AWeapon::Destroyed()
