@@ -28,9 +28,6 @@ class AInterviewTaskCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, ReplicatedUsing=OnRep_Health)
 	float Health = MaxHealth;
-
-	UPROPERTY(ReplicatedUsing=OnRep_Username)
-	FString Username;
 	
 	UPROPERTY(Replicated)
 	AWeapon* Weapon;
@@ -100,6 +97,8 @@ protected:
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 	
 	// To add mapping context
 	virtual void BeginPlay() override;
@@ -109,9 +108,6 @@ protected:
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void Destroyed() override;
-
-	UFUNCTION(Server, Reliable)
-	void SetUsername(const FString& NewUsername);
 	
 	UFUNCTION()
 	void StartFire();
@@ -127,11 +123,11 @@ protected:
 
 	UFUNCTION()
 	void OnRep_Health();
-
-	UFUNCTION()
-	void OnRep_Username();
 	
 public:
+	UFUNCTION()
+	void SetUsername(const FString& NewUsername);
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

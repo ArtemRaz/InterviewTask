@@ -76,17 +76,10 @@ void AInterviewTaskCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 	
-	UInterviewTaskGameInstance* GameInstance = Cast<UInterviewTaskGameInstance>(GetGameInstance());
-	if (GetLocalRole() == ROLE_AutonomousProxy && IsValid(GameInstance))
-	{
-		SetUsername(GameInstance->Username);
-	}
-	
 	StatsWidget = Cast<UW_UserStats>(StatsWidgetComponent->GetWidget());
 	if (IsValid(StatsWidget))
 	{
 		StatsWidget->SetHealthPercent(Health/MaxHealth);
-		StatsWidget->SetUsername(Username);
 	}
 	//Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -167,12 +160,6 @@ void AInterviewTaskCharacter::Reload()
 	}
 }
 
-
-void AInterviewTaskCharacter::SetUsername_Implementation(const FString& NewUsername)
-{
-	Username = NewUsername;
-}
-
 void AInterviewTaskCharacter::Die()
 {
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -201,11 +188,11 @@ void AInterviewTaskCharacter::OnRep_Health()
 	}
 }
 
-void AInterviewTaskCharacter::OnRep_Username()
+void AInterviewTaskCharacter::SetUsername(const FString& NewUsername)
 {
 	if (IsValid(StatsWidget))
 	{
-		StatsWidget->SetUsername(Username);
+		StatsWidget->SetUsername(NewUsername);
 	}
 }
 
@@ -213,7 +200,6 @@ void AInterviewTaskCharacter::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AInterviewTaskCharacter, Health);
-	DOREPLIFETIME(AInterviewTaskCharacter, Username);
 	DOREPLIFETIME(AInterviewTaskCharacter, Weapon);
 }
 
@@ -243,6 +229,17 @@ void AInterviewTaskCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 	else
 	{
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+	}
+}
+
+void AInterviewTaskCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
+{
+	Super::OnPlayerStateChanged(NewPlayerState, OldPlayerState);
+
+	if (AInterviewTaskPlayerState* TaskPlayerState = Cast<AInterviewTaskPlayerState>(NewPlayerState))
+	{
+		TaskPlayerState->OnUsernameChanged.AddDynamic(this, &AInterviewTaskCharacter::SetUsername);
+		SetUsername(TaskPlayerState->GetUsername());
 	}
 }
 
